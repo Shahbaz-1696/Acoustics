@@ -8,7 +8,7 @@ import { Button } from "./ui/button";
 const Appbar = () => {
   const session = useSession();
   return (
-    <header className="px-4 lg:px-6 h-14 flex items-center border-b border-gray-800 bg-gray-900/50 backdrop-blur-md fixed w-full z-10">
+    <header className="px-4 lg:px-6 h-14 flex items-center border-b border-gray-800 bg-gray-900/50 w-full">
       <Link className="flex items-center justify-center" href="/">
         <Music className="h-6 w-6 mr-2 text-fuchsia-400" />
         <span className="font-bold text-fuchsia-400">Acoustics</span>
