@@ -14,7 +14,7 @@ const Appbar = () => {
         <span className="font-bold text-fuchsia-400">Acoustics</span>
       </Link>
       <nav className="flex gap-4 sm:gap-6 mt-2 ml-auto p-2">
-        <Link
+        {/* <Link
           className="text-sm font-medium hover:text-fuchsia-400 transition-colors mt-2"
           href="#"
         >
@@ -25,7 +25,7 @@ const Appbar = () => {
           href="#"
         >
           Pricing
-        </Link>
+        </Link> */}
         {session.data?.user && (
           <Button className="bg-blue-400" onClick={() => signOut()}>
             Logout
