@@ -1,69 +1,97 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { ThumbsUp, ThumbsDown, Play, Share2 } from "lucide-react";
+import { ThumbsUp, Share2 } from "lucide-react";
 import Image from "next/image";
-import { useToast } from "@/components/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+//@ts-ignore
+import YouTubePlayer from "youtube-player";
 
 interface Video {
   id: string;
+  type: string;
+  url: string;
+  extractedId: string;
   title: string;
+  smallImg: string;
+  bigImg: string;
+  active: boolean;
+  userId: string;
   upvotes: number;
-  downvotes: number;
+  haveUpvoted: boolean;
 }
 
+const REFRESH_INTERVAL_MS = 10 * 1000;
+
 export default function Component() {
-  const [videoLink, setVideoLink] = useState("");
+  const [inputLink, setInputLink] = useState("");
   const [previewId, setPreviewId] = useState("");
-  const [queue, setQueue] = useState<Video[]>([
-    {
-      id: "dQw4w9WgXcQ",
-      title: "Rick Astley - Never Gonna Give You Up",
-      upvotes: 10,
-      downvotes: 5,
-    },
-    {
-      id: "9bZkp7q19f0",
-      title: "PSY - GANGNAM STYLE",
-      upvotes: 8,
-      downvotes: 5,
-    },
-    {
-      id: "kJQP7kiw5Fk",
-      title: "Luis Fonsi - Despacito ft. Daddy Yankee",
-      upvotes: 7,
-      downvotes: 5,
-    },
-  ]);
-  const [currentVideo, setCurrentVideo] = useState("dQw4w9WgXcQ");
+  const [queue, setQueue] = useState<Video[]>([]);
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [playNextLoader, setPlayNextLoader] = useState(false);
+  const videoPlayerRef = useRef<HTMLDivElement>();
   const { toast } = useToast();
 
-  useEffect(() => {
-    setQueue(
-      [...queue].sort(
-        (a, b) => b.upvotes - b.downvotes - (a.upvotes - a.downvotes)
-      )
-    );
-  }, [queue]);
+  async function refreshStreams() {
+    const res = await fetch(`/api/streams/myStreams`, {
+      credentials: "include",
+    });
+    const json = await res.json();
+    console.log(json);
+  }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const videoId = extractVideoId(videoLink);
-    if (videoId) {
-      setQueue([
-        ...queue,
-        { id: videoId, title: "New Video Title", upvotes: 0, downvotes: 0 },
-      ]);
-      setVideoLink("");
-      setPreviewId("");
+  useEffect(() => {
+    refreshStreams();
+    const interval = setInterval(() => {
+      refreshStreams();
+    }, REFRESH_INTERVAL_MS);
+  }, []);
+
+  useEffect(() => {
+    if (!videoPlayerRef.current) {
+      return;
     }
+    let player = YouTubePlayer(videoPlayerRef.current);
+
+    // 'loadVideoById' is queued until the player is ready to receive API calls.
+    player.loadVideoById(currentVideo?.extractedId);
+
+    // 'playVideo' is queue until the player is ready to received API calls and after 'loadVideoById' has been called.
+    player.playVideo();
+    function eventHandler(event: any) {
+      console.log(event);
+      console.log(event.data);
+      if (event.data === 0) {
+        playNext();
+      }
+    }
+    player.on("stateChange", eventHandler);
+    return () => {
+      player.destroy();
+    };
+  }, [currentVideo, videoPlayerRef]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const res = await fetch("/api/streams/", {
+      method: "POST",
+      body: JSON.stringify({
+        creatorId,
+        url: inputLink,
+      }),
+    });
+    setQueue([...queue, await res.json()]);
+    setLoading(false);
+    setInputLink("");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVideoLink(e.target.value);
+    setInputLink(e.target.value);
     const videoId = extractVideoId(e.target.value);
     setPreviewId(videoId || "");
   };
@@ -77,16 +105,24 @@ export default function Component() {
 
   const handleVote = (id: string, isUpvote: boolean) => {
     setQueue(
-      queue.map((video) =>
-        video.id === id
-          ? {
-              ...video,
-              upvotes: isUpvote ? video.upvotes + 1 : video.upvotes,
-              downvotes: !isUpvote ? video.downvotes + 1 : video.downvotes,
-            }
-          : video
-      )
+      queue
+        .map((video) =>
+          video.id === id
+            ? {
+                ...video,
+                upvotes: isUpvote ? video.upvotes + 1 : video.upvotes,
+              }
+            : video
+        )
+        .sort((a, b) => b.upvotes - a.upvotes)
     );
+  };
+
+  const playNext = () => {
+    if (queue.length > 0) {
+      setCurrentVideo(queue[0]);
+      setQueue(queue.slice(1));
+    }
   };
 
   const handleShare = () => {
@@ -135,7 +171,7 @@ export default function Component() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
                   type="text"
-                  value={videoLink}
+                  value={inputLink}
                   onChange={handleInputChange}
                   placeholder="Paste YouTube video link"
                   className="w-full bg-gray-700 text-gray-100 border-gray-600 focus:border-purple-500"
@@ -188,9 +224,8 @@ export default function Component() {
                 <Card key={video.id} className="bg-gray-700 border-gray-600">
                   <CardContent className="flex items-center space-x-4 p-4">
                     <Image
-                      // src={`https://img.youtube.com/vi/${video.id}/default.jpg`}
-                      src="/public/next.svg"
-                      alt={video.title}
+                      src={video.smallImageUrl}
+                      alt={`Thumbnail for ${video.title}`}
                       width={120}
                       height={90}
                       className="rounded"
@@ -203,7 +238,7 @@ export default function Component() {
                     <div className="flex items-center space-x-2">
                       <div className="flex items-center space-x-1">
                         <Button
-                          size="icon"
+                          size="sm"
                           variant="outline"
                           onClick={() => handleVote(video.id, true)}
                           className="bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-purple-500"
@@ -214,27 +249,6 @@ export default function Component() {
                           {video.upvotes}
                         </span>
                       </div>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => handleVote(video.id, false)}
-                          className="bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-fuchsia-500"
-                        >
-                          <ThumbsDown className="h-4 w-4 text-fuchsia-300" />
-                        </Button>
-                        <span className="text-sm font-semibold text-fuchsia-300">
-                          {video.downvotes}
-                        </span>
-                      </div>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() => setCurrentVideo(video.id)}
-                        className="bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-fuchsia-500"
-                      >
-                        <Play className="h-4 w-4 text-fuchsia-300" />
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
