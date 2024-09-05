@@ -46,6 +46,9 @@ export async function POST(req: NextRequest) {
         streamId: data.streamId,
       },
     });
+    return NextResponse.json({
+      message: "Done!",
+    });
   } catch (error) {
     return NextResponse.json(
       {

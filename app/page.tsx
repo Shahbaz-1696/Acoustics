@@ -2,9 +2,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Users, Zap, Radio } from "lucide-react";
-import Appbar from "@/components/Appbar";
-import Redirect from "@/components/Redirect";
-
+import Appbar from "./components/Appbar";
+import Redirect from "./components/Redirect";
 
 export default function LandingPage() {
   return (

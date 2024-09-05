@@ -3,7 +3,7 @@ import { Music } from "lucide-react";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
 import React from "react";
-import { Button } from "./ui/button";
+import { Button } from "../../components/ui/button";
 
 const Appbar = () => {
   const session = useSession();
