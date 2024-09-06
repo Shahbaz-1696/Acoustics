@@ -8,11 +8,18 @@ import { ThumbsUp, ThumbsDown, Play, Share2 } from "lucide-react";
 import Image from "next/image";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/ReactToastify.css";
-import axios from "axios";
+import { useSession } from "next-auth/react";
 
 interface Video {
   id: string;
+  // type: string;
+  // url: string;
   title: string;
+  // smallImageUrl: string;
+  // bigImageUrl: string;
+  // extractedId: string;
+  // active: boolean;
+  // userId: string;
   upvotes: number;
   downvotes: number;
 }
@@ -22,26 +29,7 @@ const REFRESH_INTERVAL_MS = 10 * 1000;
 export default function Component() {
   const [inputLink, setInputLink] = useState("");
   const [previewId, setPreviewId] = useState("");
-  const [queue, setQueue] = useState<Video[]>([
-    {
-      id: "dQw4w9WgXcQ",
-      title: "Rick Astley - Never Gonna Give You Up",
-      upvotes: 10,
-      downvotes: 5,
-    },
-    {
-      id: "9bZkp7q19f0",
-      title: "PSY - GANGNAM STYLE",
-      upvotes: 8,
-      downvotes: 5,
-    },
-    {
-      id: "kJQP7kiw5Fk",
-      title: "Luis Fonsi - Despacito ft. Daddy Yankee",
-      upvotes: 7,
-      downvotes: 5,
-    },
-  ]);
+  const [queue, setQueue] = useState<Video[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
   const refreshStreams = async () => {
@@ -50,6 +38,9 @@ export default function Component() {
     });
     const json = await res.json();
     console.log(json);
+    setQueue(
+      json.streams.sort((a: any, b: any) => (a.upvotes < b.upvotes ? 1 : -1))
+    );
   };
 
   useEffect(() => {
@@ -98,11 +89,10 @@ export default function Component() {
             ? {
                 ...video,
                 upvotes: isUpvote ? video.upvotes + 1 : video.upvotes,
-                downvotes: !isUpvote ? video.downvotes + 1 : video.downvotes,
               }
             : video
         )
-        .sort((a, b) => b.upvotes - b.downvotes - (a.upvotes - a.downvotes))
+        .sort((a, b) => b.upvotes - a.upvotes)
     );
   };
 
@@ -243,19 +233,6 @@ export default function Component() {
                           <ThumbsUp className="h-4 w-4 text-purple-300" />
                           <span className="text-sm font-semibold text-purple-300">
                             {video.upvotes}
-                          </span>
-                        </Button>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={() => handleVote(video.id, false)}
-                          className="bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-fuchsia-500"
-                        >
-                          <ThumbsDown className="h-4 w-4 text-fuchsia-300" />
-                          <span className="text-sm font-semibold text-fuchsia-300">
-                            {video.downvotes}
                           </span>
                         </Button>
                       </div>
