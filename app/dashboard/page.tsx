@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThumbsUp, ThumbsDown, Play, Share2 } from "lucide-react";
 import Image from "next/image";
-import { toast } from "@/components/ui/use-toast";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/ReactToastify.css";
+import axios from "axios";
 
 interface Video {
   id: string;
@@ -15,8 +17,10 @@ interface Video {
   downvotes: number;
 }
 
+const REFRESH_INTERVAL_MS = 10 * 1000;
+
 export default function Component() {
-  const [videoLink, setVideoLink] = useState("");
+  const [inputLink, setInputLink] = useState("");
   const [previewId, setPreviewId] = useState("");
   const [queue, setQueue] = useState<Video[]>([
     {
@@ -38,7 +42,22 @@ export default function Component() {
       downvotes: 5,
     },
   ]);
-  const [currentVideo, setCurrentVideo] = useState("dQw4w9WgXcQ");
+  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+
+  const refreshStreams = async () => {
+    const res = await fetch(`/api/streams/myStreams`, {
+      credentials: "include",
+    });
+    const json = await res.json();
+    console.log(json);
+  };
+
+  useEffect(() => {
+    refreshStreams();
+    const interval = setInterval(() => {
+      refreshStreams();
+    }, REFRESH_INTERVAL_MS);
+  }, []);
 
   useEffect(() => {
     setQueue(
@@ -50,60 +69,70 @@ export default function Component() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const videoId = extractVideoId(videoLink);
-    if (videoId) {
-      setQueue([
-        ...queue,
-        { id: videoId, title: "New Video Title", upvotes: 0, downvotes: 0 },
-      ]);
-      setVideoLink("");
-      setPreviewId("");
-    }
+    const newVideo: Video = {
+      id: String(queue.length + 1),
+      upvotes: 0,
+      downvotes: 0,
+      title: `New Song ${queue.length + 1}`,
+    };
+    setQueue([...queue, newVideo]);
+    setInputLink("");
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setVideoLink(e.target.value);
-    const videoId = extractVideoId(e.target.value);
-    setPreviewId(videoId || "");
+    setInputLink(e.target.value);
   };
 
-  const extractVideoId = (url: string) => {
-    const regExp =
-      /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return match && match[2].length === 11 ? match[2] : null;
+  const playNext = () => {
+    if (queue.length > 0) {
+      setCurrentVideo(queue[0]);
+      setQueue(queue.slice(1));
+    }
   };
 
   const handleVote = (id: string, isUpvote: boolean) => {
     setQueue(
-      queue.map((video) =>
-        video.id === id
-          ? {
-              ...video,
-              upvotes: isUpvote ? video.upvotes + 1 : video.upvotes,
-              downvotes: !isUpvote ? video.downvotes + 1 : video.downvotes,
-            }
-          : video
-      )
+      queue
+        .map((video) =>
+          video.id === id
+            ? {
+                ...video,
+                upvotes: isUpvote ? video.upvotes + 1 : video.upvotes,
+                downvotes: !isUpvote ? video.downvotes + 1 : video.downvotes,
+              }
+            : video
+        )
+        .sort((a, b) => b.upvotes - b.downvotes - (a.upvotes - a.downvotes))
     );
   };
 
   const handleShare = () => {
-    navigator.clipboard
-      .writeText(window.location.href)
-      .then(() => {
-        toast({
-          title: "Link copied!",
-          description: "The page URL has been copied to your clipboard.",
+    const shareableLink = window.location.href;
+    navigator.clipboard.writeText(shareableLink).then(
+      () => {
+        toast.success("Link copied to clipboard!", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
         });
-      })
-      .catch(() => {
-        toast({
-          title: "Failed to copy",
-          description: "An error occurred while copying the link.",
-          variant: "destructive",
+      },
+      (err) => {
+        console.error("Could not copy text: ", err);
+        toast.error("Failed to copy link. Please try again.", {
+          position: "top-right",
+          autoClose: 3000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
         });
-      });
+      }
+    );
   };
 
   return (
@@ -131,7 +160,7 @@ export default function Component() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <Input
                   type="text"
-                  value={videoLink}
+                  value={inputLink}
                   onChange={handleInputChange}
                   placeholder="Paste YouTube video link"
                   className="w-full bg-gray-700 text-gray-100 border-gray-600 focus:border-purple-500"
@@ -166,13 +195,19 @@ export default function Component() {
                 Now Playing
               </h2>
               <div className="aspect-w-16 aspect-h-9">
-                <iframe
-                  src={`https://www.youtube.com/embed/${currentVideo}`}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="w-full h-full rounded-lg"
-                ></iframe>
+                {currentVideo ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${currentVideo}`}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="w-full h-full rounded-lg"
+                  ></iframe>
+                ) : (
+                  <div className="flex justify-center m-10">
+                    No video playing
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -206,10 +241,10 @@ export default function Component() {
                           className="bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-purple-500"
                         >
                           <ThumbsUp className="h-4 w-4 text-purple-300" />
+                          <span className="text-sm font-semibold text-purple-300">
+                            {video.upvotes}
+                          </span>
                         </Button>
-                        <span className="text-sm font-semibold text-purple-300">
-                          {video.upvotes}
-                        </span>
                       </div>
                       <div className="flex items-center space-x-1">
                         <Button
@@ -219,19 +254,11 @@ export default function Component() {
                           className="bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-fuchsia-500"
                         >
                           <ThumbsDown className="h-4 w-4 text-fuchsia-300" />
+                          <span className="text-sm font-semibold text-fuchsia-300">
+                            {video.downvotes}
+                          </span>
                         </Button>
-                        <span className="text-sm font-semibold text-fuchsia-300">
-                          {video.downvotes}
-                        </span>
                       </div>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={() => setCurrentVideo(video.id)}
-                        className="bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-gray-400"
-                      >
-                        <Play className="h-4 w-4 text-gray-300" />
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -239,6 +266,18 @@ export default function Component() {
             </div>
           </div>
         </div>
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="dark"
+        />
       </div>
     </section>
   );

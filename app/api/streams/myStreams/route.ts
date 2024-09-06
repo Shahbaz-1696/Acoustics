@@ -50,9 +50,6 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({
-    streams: streams.map(({ _count, ...rest }) => ({
-      ...rest,
-      upvotes: _count.upvotes,
-    })),
+    streams,
   });
 }
