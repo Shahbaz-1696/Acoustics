@@ -4,30 +4,33 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { ThumbsUp, ThumbsDown, Play, Share2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Share2 } from "lucide-react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/ReactToastify.css";
 import Image from "next/image";
+import LiteYouTubeEmbed from "react-lite-youtube-embed";
+import "react-lite-youtube-embed/dist/LiteYouTubeEmbed.css";
+import { YT_REGEX } from "../lib/utils";
 
 interface Video {
   id: string;
-  // type: string;
-  // url: string;
+  type: string;
+  url: string;
   title: string;
   smallImageUrl: string;
-  // bigImageUrl: string;
-  // extractedId: string;
-  // active: boolean;
-  // userId: string;
+  bigImageUrl: string;
+  extractedId: string;
+  active: boolean;
+  userId: string;
   upvotes: number;
   downvotes: number;
+  haveUpvoted: boolean;
 }
 
 const REFRESH_INTERVAL_MS = 10 * 1000;
 
 export default function Component() {
   const [inputLink, setInputLink] = useState("");
-  const [previewId, setPreviewId] = useState("");
   const [queue, setQueue] = useState<Video[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
@@ -87,11 +90,19 @@ export default function Component() {
             ? {
                 ...video,
                 upvotes: isUpvote ? video.upvotes + 1 : video.upvotes - 1,
+                haveUpvoted: !video.haveUpvoted,
               }
             : video
         )
         .sort((a, b) => b.upvotes - a.upvotes)
     );
+
+    fetch(`/api/streams/${isUpvote ? "upvote" : "downvote"}`, {
+      method: "POST",
+      body: JSON.stringify({
+        streamId: id,
+      }),
+    });
   };
 
   const handleShare = () => {
@@ -156,25 +167,25 @@ export default function Component() {
                 <Button
                   type="submit"
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+                  onClick={() => {
+                    fetch(`/api/streams`, {
+                      method: "POST",
+                      body: JSON.stringify({
+                        creatorId: "creatorId",
+                        url: inputLink,
+                      }),
+                    });
+                  }}
                 >
                   Add to Queue
                 </Button>
               </form>
-              {previewId && (
-                <div className="mt-6">
-                  <h3 className="text-lg font-semibold mb-2 text-purple-300">
-                    Preview
-                  </h3>
-                  <div className="aspect-w-16 aspect-h-9">
-                    <iframe
-                      src={"/public/next.svg"}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full rounded-lg"
-                    ></iframe>
-                  </div>
-                </div>
+              {inputLink && inputLink.match(YT_REGEX) && (
+                <Card className="bg-gray-900 border-gray800 space-y-4 mt-5">
+                  <CardContent className="p-4">
+                    <LiteYouTubeEmbed title="" id={inputLink.split("?v=")[1]} />
+                  </CardContent>
+                </Card>
               )}
             </div>
 
@@ -225,10 +236,19 @@ export default function Component() {
                         <Button
                           size="icon"
                           variant="outline"
-                          onClick={() => handleVote(video.id, true)}
+                          onClick={() =>
+                            handleVote(
+                              video.id,
+                              video.haveUpvoted ? false : true
+                            )
+                          }
                           className="bg-gray-800 border-gray-600 hover:bg-gray-700 hover:border-purple-500"
                         >
-                          <ThumbsUp className="h-4 w-4 text-purple-300" />
+                          {video.haveUpvoted ? (
+                            <ChevronDown className="h-4 w-4 text-purple-300" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4 text-purple-300" />
+                          )}
                           <span className="text-sm font-semibold text-purple-300">
                             {video.upvotes}
                           </span>

@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const data = UpvoteSchema.parse(req.json());
+    const data = UpvoteSchema.parse(await req.json());
     await prismaClient.upvote.delete({
       where: {
         userId_streamId: {
@@ -47,6 +47,9 @@ export async function POST(req: NextRequest) {
           streamId: data.streamId,
         },
       },
+    });
+    return NextResponse.json({
+      message: "Done!",
     });
   } catch (error) {
     return NextResponse.json(
