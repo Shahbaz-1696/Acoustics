@@ -55,8 +55,9 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      message: "Added stream",
-      id: stream.id,
+      ...stream,
+      hasUpvoted: false,
+      upvotes: 0,
     });
   } catch (error) {
     console.log(error);

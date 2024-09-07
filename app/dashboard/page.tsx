@@ -11,6 +11,7 @@ import Image from "next/image";
 import LiteYouTubeEmbed from "react-lite-youtube-embed";
 import "react-lite-youtube-embed/dist/LiteYouTubeEmbed.css";
 import { YT_REGEX } from "../lib/utils";
+import Appbar from "../components/Appbar";
 
 interface Video {
   id: string;
@@ -29,10 +30,13 @@ interface Video {
 
 const REFRESH_INTERVAL_MS = 10 * 1000;
 
+const creatorId = "8f8a60be-3bbf-431b-b191-21a226c3208b";
+
 export default function Component() {
   const [inputLink, setInputLink] = useState("");
   const [queue, setQueue] = useState<Video[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
+  const [loading, setLoading] = useState(false);
 
   const refreshStreams = async () => {
     const res = await fetch(`/api/streams/myStreams`, {
@@ -58,16 +62,19 @@ export default function Component() {
     );
   }, [queue]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newVideo: Video = {
-      id: String(queue.length + 1),
-      upvotes: 0,
-      downvotes: 0,
-      title: `New Song ${queue.length + 1}`,
-      smallImageUrl: String(queue.length + 1),
-    };
-    setQueue([...queue, newVideo]);
+    setLoading(true);
+    const res = await fetch(`/api/streams/`, {
+      method: "POST",
+      body: JSON.stringify({
+        creatorId,
+        url: inputLink,
+      }),
+    });
+
+    setQueue([...queue, await res.json()]);
+    setLoading(false);
     setInputLink("");
   };
 
@@ -106,7 +113,7 @@ export default function Component() {
   };
 
   const handleShare = () => {
-    const shareableLink = window.location.href;
+    const shareableLink = `${window.location.hostname}/creator/${creatorId}`;
     navigator.clipboard.writeText(shareableLink).then(
       () => {
         toast.success("Link copied to clipboard!", {
@@ -136,6 +143,7 @@ export default function Component() {
 
   return (
     <section className="w-full bg-gradient-to-br from-gray-900 via-purple-900 to-fuchsia-900">
+      <Appbar />
       <div className="flex flex-col min-h-screen bg-gray-900 bg-opacity-50 text-gray-100">
         <div className="container mx-auto p-4 max-w-4xl">
           <div className="flex justify-between items-center mb-8">
@@ -167,20 +175,13 @@ export default function Component() {
                 <Button
                   type="submit"
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-                  onClick={() => {
-                    fetch(`/api/streams`, {
-                      method: "POST",
-                      body: JSON.stringify({
-                        creatorId: "creatorId",
-                        url: inputLink,
-                      }),
-                    });
-                  }}
+                  onClick={handleSubmit}
+                  disabled={loading}
                 >
-                  Add to Queue
+                  {loading ? "Loading..." : "Add to Queue"}
                 </Button>
               </form>
-              {inputLink && inputLink.match(YT_REGEX) && (
+              {inputLink && inputLink.match(YT_REGEX) && !loading && (
                 <Card className="bg-gray-900 border-gray800 space-y-4 mt-5">
                   <CardContent className="p-4">
                     <LiteYouTubeEmbed title="" id={inputLink.split("?v=")[1]} />
