@@ -5,17 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { ThumbsUp, ThumbsDown, Play, Share2 } from "lucide-react";
-import Image from "next/image";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/ReactToastify.css";
-import { useSession } from "next-auth/react";
+import Image from "next/image";
 
 interface Video {
   id: string;
   // type: string;
   // url: string;
   title: string;
-  // smallImageUrl: string;
+  smallImageUrl: string;
   // bigImageUrl: string;
   // extractedId: string;
   // active: boolean;
@@ -38,9 +37,7 @@ export default function Component() {
     });
     const json = await res.json();
     console.log(json);
-    setQueue(
-      json.streams.sort((a: any, b: any) => (a.upvotes < b.upvotes ? 1 : -1))
-    );
+    setQueue(json.streams.sort((a: any, b: any) => b.upvotes - a.upvotes));
   };
 
   useEffect(() => {
@@ -65,6 +62,7 @@ export default function Component() {
       upvotes: 0,
       downvotes: 0,
       title: `New Song ${queue.length + 1}`,
+      smallImageUrl: String(queue.length + 1),
     };
     setQueue([...queue, newVideo]);
     setInputLink("");
@@ -88,7 +86,7 @@ export default function Component() {
           video.id === id
             ? {
                 ...video,
-                upvotes: isUpvote ? video.upvotes + 1 : video.upvotes,
+                upvotes: isUpvote ? video.upvotes + 1 : video.upvotes - 1,
               }
             : video
         )
@@ -211,7 +209,7 @@ export default function Component() {
                 <Card key={video.id} className="bg-gray-700 border-gray-600">
                   <CardContent className="flex items-center space-x-4 p-4">
                     <Image
-                      src={`/public/next.svg`}
+                      src={video.smallImageUrl}
                       alt={video.title}
                       width={120}
                       height={90}
