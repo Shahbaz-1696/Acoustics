@@ -4,6 +4,7 @@ import { prismaClient } from "@/app/lib/db";
 // @ts-ignore
 import youtubeSearchApi from "youtube-search-api";
 import { YT_REGEX } from "@/app/lib/utils";
+import { getServerSession } from "next-auth";
 
 const CreateStreamSchema = z.object({
   creatorId: z.string(),
@@ -75,13 +76,68 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
   const creatorId = searchParams.get("creatorId");
+  const session = await getServerSession();
+
+  if (!session?.user?.email) {
+    return NextResponse.json(
+      {
+        message: "Unauthenticated",
+      },
+      {
+        status: 403,
+      }
+    );
+  }
+  const user = await prismaClient.user.findFirst({
+    where: {
+      email: session?.user?.email ?? "",
+    },
+  });
+
+  if (!user) {
+    return NextResponse.json(
+      {
+        message: "Unauthenticated",
+      },
+      {
+        status: 403,
+      }
+    );
+  }
+
+  if (!creatorId) {
+    return NextResponse.json(
+      {
+        message: "Error",
+      },
+      {
+        status: 411,
+      }
+    );
+  }
   const streams = await prismaClient.stream.findMany({
     where: {
-      userId: creatorId ?? "",
+      userId: creatorId,
+    },
+    include: {
+      _count: {
+        select: {
+          upvotes: true,
+        },
+      },
+      upvotes: {
+        where: {
+          userId: user.id,
+        },
+      },
     },
   });
 
   return NextResponse.json({
-    streams,
+    streams: streams.map(({ _count, ...rest }) => ({
+      ...rest,
+      upvotes: _count.upvotes,
+      haveUpvoted: rest.upvotes.length ? true : false,
+    })),
   });
 }
