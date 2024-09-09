@@ -31,7 +31,7 @@ interface Video {
 
 const REFRESH_INTERVAL_MS = 10 * 1000;
 
-const creatorId = "8f8a60be-3bbf-431b-b191-21a226c3208b";
+const creatorId = "331e188f-8859-421d-9476-f3f52d667f71";
 
 export default function Component() {
   return <StreamView creatorId={creatorId} />;
