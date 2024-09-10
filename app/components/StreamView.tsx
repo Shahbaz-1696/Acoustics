@@ -30,21 +30,28 @@ interface Video {
 
 const REFRESH_INTERVAL_MS = 10 * 1000;
 
-export default function StreamView({ creatorId }: { creatorId: string }) {
+export default function StreamView({
+  creatorId,
+  playVideo = false,
+}: {
+  creatorId: string;
+  playVideo: boolean;
+}) {
   const [inputLink, setInputLink] = useState("");
   const [queue, setQueue] = useState<Video[]>([]);
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [loading, setLoading] = useState(false);
+  const [playNextLoader, setPlayNextLoader] = useState(false);
 
   const refreshStreams = async () => {
     const res = await fetch(`/api/streams/?creatorId=${creatorId}`, {
       credentials: "include",
     });
     const json = await res.json();
-    console.log(json);
     setQueue(
       json.streams.sort((a: any, b: any) => (a.upvotes < b.upvotes ? 1 : -1))
     );
+    setCurrentVideo(json.activeStream.stream);
   };
 
   useEffect(() => {
@@ -82,10 +89,19 @@ export default function StreamView({ creatorId }: { creatorId: string }) {
     setInputLink(e.target.value);
   };
 
-  const playNext = () => {
+  const playNext = async () => {
     if (queue.length > 0) {
-      setCurrentVideo(queue[0]);
-      setQueue(queue.slice(1));
+      try {
+        setPlayNextLoader(true);
+        const data = await fetch(`/api/streams/nextAudio`, {
+          method: "GET",
+        });
+        const json = await data.json();
+        setCurrentVideo(json.activeStream);
+      } catch (error) {
+        console.log(error);
+      }
+      setPlayNextLoader(false);
     }
   };
 
@@ -198,28 +214,48 @@ export default function StreamView({ creatorId }: { creatorId: string }) {
                 <h2 className="text-xl font-semibold mb-4 text-purple-300">
                   Now Playing
                 </h2>
-                <div className="aspect-w-16 aspect-h-9">
-                  {currentVideo ? (
-                    <iframe
-                      src={`https://www.youtube.com/embed/${currentVideo}`}
-                      frameBorder="0"
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                      className="w-full h-full rounded-lg"
-                    ></iframe>
-                  ) : (
-                    <div className="flex justify-center m-10">
-                      No video playing
-                    </div>
-                  )}
-                </div>
+                <Card className="aspect-w-16 aspect-h-9 bg-gray-900 border-gray-800">
+                  <CardContent className="p-4">
+                    {currentVideo ? (
+                      <div>
+                        {playVideo ? (
+                          <>
+                            <iframe
+                              width={"100%"}
+                              height={300}
+                              allow="autoplay"
+                              src={`https://www.youtube.com/embed/${currentVideo.extractedId}?autoplay=1`}
+                            ></iframe>
+                          </>
+                        ) : (
+                          <>
+                            <img
+                              src={currentVideo.bigImageUrl}
+                              className="w-full h-72 rounded object-cover"
+                            />
+                            <p className="mt-2 text-center text-white font-semibold">
+                              {currentVideo.title}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-center py-8 text-gray-400">
+                        No video playing
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
-              <Button
-                onClick={playNext}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-colors"
-              >
-                <Play className="mr-2 h-4 w-4" /> Play Next
-              </Button>
+              {playVideo && (
+                <Button
+                  onClick={playNext}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white transition-colors"
+                >
+                  <Play className="mr-2 h-4 w-4" />{" "}
+                  {playNextLoader ? "Loading..." : "Play Next"}
+                </Button>
+              )}
             </div>
 
             <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full">

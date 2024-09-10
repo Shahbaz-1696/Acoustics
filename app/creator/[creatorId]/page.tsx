@@ -9,7 +9,7 @@ export default function Creator({
 }) {
   return (
     <div>
-      <StreamView creatorId={creatorId} />;
+      <StreamView creatorId={creatorId} playVideo={false} />;
     </div>
   );
 }
