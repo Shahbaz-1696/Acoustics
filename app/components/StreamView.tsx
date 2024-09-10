@@ -51,7 +51,12 @@ export default function StreamView({
     setQueue(
       json.streams.sort((a: any, b: any) => (a.upvotes < b.upvotes ? 1 : -1))
     );
-    setCurrentVideo(json.activeStream.stream);
+    setCurrentVideo((video) => {
+      if (video?.id === json.activeStream?.stream?.id) {
+        return video;
+      }
+      return json.activeStream.stream;
+    });
   };
 
   useEffect(() => {
@@ -93,15 +98,16 @@ export default function StreamView({
     if (queue.length > 0) {
       try {
         setPlayNextLoader(true);
-        const data = await fetch(`/api/streams/nextAudio`, {
+        const data = await fetch(`/api/streams/next`, {
           method: "GET",
         });
         const json = await data.json();
-        setCurrentVideo(json.activeStream);
+        setCurrentVideo(json.stream);
       } catch (error) {
         console.log(error);
+      } finally {
+        setPlayNextLoader(false);
       }
-      setPlayNextLoader(false);
     }
   };
 
@@ -262,6 +268,15 @@ export default function StreamView({
               <h2 className="text-xl font-semibold mb-4 text-purple-300">
                 Upcoming Songs
               </h2>
+              {queue.length === 0 && (
+                <Card className="aspect-w-16 aspect-h-9 bg-gray-900 border-gray-800">
+                  <CardContent className="p-4">
+                    <p className="text-center py-8 text-gray-400">
+                      No videos in queue
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
               <div className="space-y-4">
                 {queue.map((video) => (
                   <Card key={video.id} className="bg-gray-700 border-gray-600">
