@@ -1,4 +1,4 @@
-import { prismaClient } from "@/lib/db";
+import db from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       }
     );
   }
-  const user = await prismaClient.user.findFirst({
+  const user = await db.user.findFirst({
     where: {
       email: session?.user?.email ?? "",
     },
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       }
     );
   }
-  const streams = await prismaClient.stream.findMany({
+  const streams = await db.stream.findMany({
     where: {
       userId: user.id,
     },

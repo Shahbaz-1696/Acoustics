@@ -1,4 +1,4 @@
-import { prismaClient } from "@/lib/db";
+import db from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 
@@ -16,7 +16,7 @@ export async function GET() {
     );
   }
 
-  const user = await prismaClient.user.findFirst({
+  const user = await db.user.findFirst({
     where: {
       email: session?.user?.email ?? "",
     },
@@ -33,7 +33,7 @@ export async function GET() {
     );
   }
 
-  const mostUpvotedStream = await prismaClient.stream.findFirst({
+  const mostUpvotedStream = await db.stream.findFirst({
     where: {
       userId: user.id,
       played: false,
@@ -46,7 +46,7 @@ export async function GET() {
   });
 
   await Promise.all([
-    prismaClient.currentStream.upsert({
+    db.currentStream.upsert({
       where: {
         userId: user.id,
       },
@@ -59,7 +59,7 @@ export async function GET() {
         streamId: mostUpvotedStream?.id,
       },
     }),
-    prismaClient.stream.update({
+    db.stream.update({
       where: {
         id: mostUpvotedStream?.id ?? "",
       },

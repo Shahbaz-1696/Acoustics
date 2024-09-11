@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prismaClient } from "@/lib/db";
+import db from "@/lib/db";
 // @ts-ignore
 import youtubeSearchApi from "youtube-search-api";
 import { YT_REGEX } from "@/lib/utils";
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const user = await prismaClient.user.findFirst({
+    const user = await db.user.findFirst({
       where: {
         email: session?.user?.email ?? "",
       },
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       a.width < b.width ? -1 : 1
     );
 
-    const stream = await prismaClient.stream.create({
+    const stream = await db.stream.create({
       data: {
         userId: data.creatorId,
         url: data.url,
@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
       }
     );
   }
-  const user = await prismaClient.user.findFirst({
+  const user = await db.user.findFirst({
     where: {
       email: session?.user?.email ?? "",
     },
@@ -144,7 +144,7 @@ export async function GET(req: NextRequest) {
     );
   }
   const [streams, activeStream] = await Promise.all([
-    prismaClient.stream.findMany({
+    db.stream.findMany({
       where: {
         userId: creatorId,
         played: false,
@@ -162,7 +162,7 @@ export async function GET(req: NextRequest) {
         },
       },
     }),
-    prismaClient.currentStream.findFirst({
+    db.currentStream.findFirst({
       where: {
         userId: creatorId,
       },
