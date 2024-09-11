@@ -1,6 +1,5 @@
 import db from "@/lib/db";
 import GoogleProvider from "next-auth/providers/google";
-import { NextAuthOptions } from "next-auth";
 
 export const authOptions = {
   providers: [
@@ -11,7 +10,7 @@ export const authOptions = {
   ],
   secret: process.env.NEXTAUTH_SECRET ?? "secret",
   callbacks: {
-    async signIn(params) {
+    async signIn(params: any) {
       if (!params.user.email) {
         return false;
       }
@@ -36,33 +35,5 @@ export const authOptions = {
         return false;
       }
     },
-    async jwt({ token, user }) {
-      if (user && user.email) {
-        const dbUser = await db.user.findUnique({
-          where: {
-            email: user.email,
-          },
-        });
-
-        if (!dbUser) {
-          return token;
-        }
-
-        return {
-          ...token,
-          id: dbUser.id,
-        };
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      return {
-        ...session,
-        user: {
-          ...session.user,
-          id: token.id as string,
-        },
-      };
-    },
   },
-} satisfies NextAuthOptions;
+};
