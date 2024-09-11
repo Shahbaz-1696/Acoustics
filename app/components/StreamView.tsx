@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,8 @@ import LiteYouTubeEmbed from "react-lite-youtube-embed";
 import "react-lite-youtube-embed/dist/LiteYouTubeEmbed.css";
 import { YT_REGEX } from "../../lib/utils";
 import Appbar from "../components/Appbar";
+// @ts-ignore
+import YouTubePlayer from "youtube-player";
 
 interface Video {
   id: string;
@@ -42,6 +44,7 @@ export default function StreamView({
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
   const [loading, setLoading] = useState(false);
   const [playNextLoader, setPlayNextLoader] = useState(false);
+  const videoPlayerRef = useRef<HTMLDivElement>();
 
   const refreshStreams = async () => {
     const res = await fetch(`/api/streams/?creatorId=${creatorId}`, {
@@ -73,6 +76,31 @@ export default function StreamView({
       )
     );
   }, [queue]);
+
+  useEffect(() => {
+    if (!videoPlayerRef.current) {
+      return;
+    }
+    let player = YouTubePlayer(videoPlayerRef.current);
+
+    // 'loadVideoById' is queued until the player is ready to receive API calls.
+    player.loadVideoById(currentVideo?.extractedId);
+
+    // 'playVideo' is queue until the player is ready to received API calls and after 'loadVideoById' has been called.
+    player.playVideo();
+
+    function eventHandler(event: any) {
+      if (event.data === 0) {
+        playNext();
+      }
+    }
+
+    player.on("stateChange", eventHandler);
+
+    return () => {
+      player.destroy();
+    };
+  }, [currentVideo, videoPlayerRef]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,12 +255,14 @@ export default function StreamView({
                       <div>
                         {playVideo ? (
                           <>
-                            <iframe
+                            {/* @ts-ignore */}
+                            <div ref={videoPlayerRef} className="w-full" />
+                            {/* <iframe
                               width={"100%"}
                               height={300}
                               allow="autoplay"
                               src={`https://www.youtube.com/embed/${currentVideo.extractedId}?autoplay=1`}
-                            ></iframe>
+                            ></iframe> */}
                           </>
                         ) : (
                           <>

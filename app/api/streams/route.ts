@@ -27,11 +27,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const session = await getServerSession();
+    // TODO: you can get rid of db call here
+    if (!session?.user?.email) {
+      return NextResponse.json(
+        {
+          message: "Unauthenticated",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
+    const user = await prismaClient.user.findFirst({
+      where: {
+        email: session?.user?.email ?? "",
+      },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        {
+          message: "Unauthenticated",
+        },
+        {
+          status: 403,
+        }
+      );
+    }
+
     const extractedId = data.url.split("?v=")[1];
 
     const res = await youtubeSearchApi.GetVideoDetails(extractedId);
-    console.log(res.title);
-    console.log(res.thumbnail.thumbnails);
     const thumbnails = res.thumbnail.thumbnails;
     thumbnails.sort((a: { width: number }, b: { width: number }) =>
       a.width < b.width ? -1 : 1
