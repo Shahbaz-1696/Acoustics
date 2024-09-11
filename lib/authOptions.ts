@@ -1,6 +1,6 @@
 import db from "@/lib/db";
 import GoogleProvider from "next-auth/providers/google";
-import { NextAuthOptions, type DefaultSession } from "next-auth";
+import { NextAuthOptions } from "next-auth";
 
 export const authOptions = {
   providers: [
@@ -66,11 +66,3 @@ export const authOptions = {
     },
   },
 } satisfies NextAuthOptions;
-
-declare module "next-auth" {
-  interface Session {
-    user: {
-      id: string;
-    } & DefaultSession["user"];
-  }
-}
