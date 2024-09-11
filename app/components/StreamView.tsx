@@ -10,7 +10,7 @@ import "react-toastify/ReactToastify.css";
 import Image from "next/image";
 import LiteYouTubeEmbed from "react-lite-youtube-embed";
 import "react-lite-youtube-embed/dist/LiteYouTubeEmbed.css";
-import { YT_REGEX } from "../lib/utils";
+import { YT_REGEX } from "../../lib/utils";
 import Appbar from "../components/Appbar";
 
 interface Video {
@@ -103,6 +103,7 @@ export default function StreamView({
         });
         const json = await data.json();
         setCurrentVideo(json.stream);
+        setQueue((q) => q.filter((x) => x.id !== json.stream?.id));
       } catch (error) {
         console.log(error);
       } finally {

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { prismaClient } from "@/app/lib/db";
+import { prismaClient } from "@/lib/db";
 // @ts-ignore
 import youtubeSearchApi from "youtube-search-api";
-import { YT_REGEX } from "@/app/lib/utils";
+import { YT_REGEX } from "@/lib/utils";
 import { getServerSession } from "next-auth";
 
 const CreateStreamSchema = z.object({
